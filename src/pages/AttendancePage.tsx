@@ -7,9 +7,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { AttendanceRecord } from '../types';
 import { apiService } from '../services/api';
 import { format, isToday } from 'date-fns';
+import { useToast } from '../hooks/useToast';
 
 export function AttendancePage() {
   const { currentUser } = useAuth();
+  const { success, error } = useToast();
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showCheckOutModal, setShowCheckOutModal] = useState(false);
@@ -28,15 +30,14 @@ export function AttendancePage() {
       if (response.success) {
         setAttendanceRecords(response.data || []);
       }
-    } catch (error) {
-      console.error('Error loading attendance data:', error);
+    } catch (err) {
+      error('Failed to load attendance data', 'Please try refreshing the page');
     } finally {
       setLoading(false);
     }
   };
 
   const handleQRScan = async (qrData: string) => {
-    console.log('QR Data received:', qrData);
     try {
       let parsedData;
       try {
@@ -45,12 +46,11 @@ export function AttendancePage() {
           throw new Error('Invalid QR format');
         }
       } catch (e) {
-        alert('Invalid QR code format. Please scan a valid parent QR code.');
+        error('Invalid QR Code', 'Please scan a valid parent QR code');
         return;
       }
 
       const response = await apiService.scanQrCode(qrData);
-      console.log('Scan response:', response);
       
       if (response.success && response.data) {
         setSelectedParent(response.data);
@@ -61,15 +61,14 @@ export function AttendancePage() {
           setShowCheckOutModal(true);
         }
       } else {
-        let errorMsg = response.error || 'Parent not found. Please try scanning again.';
+        let errorMsg = response.error || 'Parent not found';
         if (errorMsg.includes('+') || errorMsg.includes('/') || errorMsg.includes('=')) {
-          errorMsg = 'Server error occurred. Please try again or contact support.';
+          errorMsg = 'Server error occurred';
         }
-        alert(`Scan failed: ${errorMsg}`);
+        error('Scan Failed', errorMsg);
       }
-    } catch (error) {
-      console.error('QR scan error:', error);
-      alert('Error scanning QR code. Please try again.');
+    } catch (err) {
+      error('QR Scan Error', 'Please try scanning again');
     }
   };
 
@@ -77,15 +76,14 @@ export function AttendancePage() {
     try {
       const response = await apiService.checkIn(childId, notes);
       if (response.success) {
-        alert('Child checked in successfully!');
+        success('Check-In Successful', 'Child has been checked in');
         setShowCheckInModal(false);
         loadAttendanceData();
       } else {
-        alert(`Failed to check in child: ${response.error || 'Please try again.'}`);
+        error('Check-In Failed', response.error || 'Please try again');
       }
-    } catch (error) {
-      console.error('Check-in error:', error);
-      alert('Error checking in child. Please try again.');
+    } catch (err) {
+      error('Check-In Error', 'Please try again');
     }
   };
 
@@ -93,29 +91,25 @@ export function AttendancePage() {
     try {
       let response;
       if (childId) {
-        // Individual child checkout by child ID
         response = await apiService.checkOutByChild(childId, notes);
       } else if (recordId) {
-        // Individual child checkout by record ID (fallback)
         response = await apiService.checkOut(recordId, notes);
       } else if (selectedParent?.parent?.id) {
-        // All children checkout by parent
         response = await apiService.checkOutByParent(selectedParent.parent.id, notes);
       } else {
-        alert('Invalid checkout request');
+        error('Invalid Request', 'Unable to process checkout');
         return;
       }
 
       if (response.success) {
-        alert('Child(ren) checked out successfully!');
+        success('Check-Out Successful', 'Child(ren) have been checked out');
         setShowCheckOutModal(false);
         loadAttendanceData();
       } else {
-        alert(`Failed to check out: ${response.error || 'Please try again.'}`);
+        error('Check-Out Failed', response.error || 'Please try again');
       }
-    } catch (error) {
-      console.error('Check-out error:', error);
-      alert('Error checking out child. Please try again.');
+    } catch (err) {
+      error('Check-Out Error', 'Please try again');
     }
   };
 
@@ -153,7 +147,7 @@ export function AttendancePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
       </div>
     );
   }
@@ -161,8 +155,8 @@ export function AttendancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Attendance Management</h1>
-        <p className="text-gray-600">Check children in and out using QR code scanning.</p>
+        <h1 className="text-2xl font-bold text-secondary-900">Attendance Management</h1>
+        <p className="text-secondary-600">Check children in and out using QR code scanning.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -172,8 +166,8 @@ export function AttendancePage() {
               <UserCheck className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-800">Check-In</h3>
-              <p className="text-sm text-gray-600">Scan parent QR code to check in children</p>
+              <h3 className="text-lg font-semibold text-secondary-800">Check-In</h3>
+              <p className="text-sm text-secondary-600">Scan parent QR code to check in children</p>
             </div>
           </div>
           <button
@@ -187,17 +181,17 @@ export function AttendancePage() {
 
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <UserX className="w-6 h-6 text-red-600" />
+            <div className="p-2 bg-primary-100 rounded-lg">
+              <UserX className="w-6 h-6 text-primary-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-800">Check-Out</h3>
-              <p className="text-sm text-gray-600">Scan parent QR code to check out children</p>
+              <h3 className="text-lg font-semibold text-secondary-800">Check-Out</h3>
+              <p className="text-sm text-secondary-600">Scan parent QR code to check out children</p>
             </div>
           </div>
           <button
             onClick={() => startQRScan('checkout')}
-            className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
           >
             <QrCode className="w-5 h-5" />
             <span>Start Check-Out</span>
@@ -206,17 +200,17 @@ export function AttendancePage() {
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Today's Attendance</h3>
+        <h3 className="text-lg font-semibold text-secondary-800 mb-4">Today's Attendance</h3>
         {todaysAttendance.length > 0 ? (
           <div className="space-y-3">
             {todaysAttendance.map((record) => (
               <div key={record.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                  <UserCheck className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                  <UserCheck className="w-6 h-6 text-primary-600" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
-                    <h4 className="font-semibold text-gray-800">
+                    <h4 className="font-semibold text-secondary-800">
                       {record.childName || record.childId}
                     </h4>
                     <span className={`px-2 py-1 rounded-full text-xs ${
@@ -227,10 +221,10 @@ export function AttendancePage() {
                       {record.checkOutTime ? 'Completed' : 'Checked In'}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-secondary-600">
                     Parent: {record.parentName || record.parentId}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-secondary-500">
                     In: {format(new Date(record.checkInTime), 'HH:mm')}
                     {record.checkOutTime && ` • Out: ${format(new Date(record.checkOutTime), 'HH:mm')}`}
                   </p>
@@ -239,7 +233,7 @@ export function AttendancePage() {
             ))}
           </div>
         ) : (
-          <p className="text-center text-gray-500 py-8">No attendance records for today yet.</p>
+          <p className="text-center text-secondary-500 py-8">No attendance records for today yet.</p>
         )}
       </div>
 

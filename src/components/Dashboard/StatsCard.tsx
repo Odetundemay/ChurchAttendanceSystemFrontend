@@ -9,23 +9,26 @@ interface StatsCardProps {
     value: number;
     isPositive: boolean;
   };
-  color: 'purple' | 'blue' | 'green' | 'yellow';
+  color: 'primary' | 'secondary' | 'blue' | 'green' | 'yellow';
 }
 
 export function StatsCard({ title, value, icon: Icon, trend, color }: StatsCardProps) {
   const colorClasses = {
-    purple: 'bg-purple-500 text-purple-600 bg-purple-50',
-    blue: 'bg-blue-500 text-blue-600 bg-blue-50',
-    green: 'bg-green-500 text-green-600 bg-green-50',
-    yellow: 'bg-yellow-500 text-yellow-600 bg-yellow-50'
+    primary: { bg: 'bg-primary-50', text: 'text-primary-600', icon: 'bg-primary-500' },
+    secondary: { bg: 'bg-secondary-50', text: 'text-secondary-600', icon: 'bg-secondary-500' },
+    blue: { bg: 'bg-blue-50', text: 'text-blue-600', icon: 'bg-blue-500' },
+    green: { bg: 'bg-green-50', text: 'text-green-600', icon: 'bg-green-500' },
+    yellow: { bg: 'bg-yellow-50', text: 'text-yellow-600', icon: 'bg-yellow-500' }
   };
+
+  const colors = colorClasses[color];
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+          <p className="text-sm font-medium text-secondary-600">{title}</p>
+          <p className="text-3xl font-bold text-secondary-900 mt-2">{value}</p>
           {trend && (
             <div className={`flex items-center mt-2 text-sm ${
               trend.isPositive ? 'text-green-600' : 'text-red-600'
@@ -36,8 +39,8 @@ export function StatsCard({ title, value, icon: Icon, trend, color }: StatsCardP
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-full ${colorClasses[color].split(' ')[2]}`}>
-          <Icon className={`w-6 h-6 ${colorClasses[color].split(' ')[1]}`} />
+        <div className={`p-3 rounded-full ${colors.bg}`}>
+          <Icon className={`w-6 h-6 ${colors.text}`} />
         </div>
       </div>
     </div>

@@ -8,6 +8,8 @@ import { AttendancePage } from './pages/AttendancePage';
 import { ReportsPage } from './pages/ReportsPage';
 import { AdminPage } from './pages/AdminPage';
 import { Navbar } from './components/Layout/Navbar';
+import { ToastContainer } from './components/Toast/ToastContainer';
+import { useToast } from './hooks/useToast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, isLoading } = useAuth();
@@ -15,7 +17,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500"></div>
       </div>
     );
   }
@@ -28,12 +30,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
+  const { toasts, removeToast } = useToast();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {children}
       </main>
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
