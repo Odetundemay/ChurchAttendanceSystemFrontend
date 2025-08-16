@@ -38,6 +38,18 @@ export function AttendancePage() {
   const handleQRScan = async (qrData: string) => {
     console.log('QR Data received:', qrData);
     try {
+      // Validate QR data format before sending
+      let parsedData;
+      try {
+        parsedData = JSON.parse(qrData);
+        if (!parsedData.family || !parsedData.s) {
+          throw new Error('Invalid QR format');
+        }
+      } catch (e) {
+        alert('Invalid QR code format. Please scan a valid parent QR code.');
+        return;
+      }
+
       const response = await apiService.scanQrCode(qrData);
       console.log('Scan response:', response);
       
@@ -50,7 +62,12 @@ export function AttendancePage() {
           setShowCheckOutModal(true);
         }
       } else {
-        alert(`Scan failed: ${response.error || 'Parent not found. Please try scanning again.'}`);
+        // Handle encoded error messages
+        let errorMsg = response.error || 'Parent not found. Please try scanning again.';
+        if (errorMsg.includes('+') || errorMsg.includes('/') || errorMsg.includes('=')) {
+          errorMsg = 'Server error occurred. Please try again or contact support.';
+        }
+        alert(`Scan failed: ${errorMsg}`);
       }
     } catch (error) {
       console.error('QR scan error:', error);

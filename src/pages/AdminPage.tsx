@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Baby, Plus, QrCode } from 'lucide-react';
+import { Users, UserPlus, Baby, Plus, QrCode, Trash2 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import QRCode from 'qrcode';
@@ -106,6 +106,40 @@ export function AdminPage() {
     }
   };
 
+  const deleteParent = async (parentId: string, parentName: string) => {
+    if (!confirm(`Delete ${parentName}? This will also delete all their children.`)) return;
+    
+    try {
+      const response = await apiService.deleteParent(parentId);
+      if (response.success) {
+        loadData();
+        alert('Parent deleted successfully!');
+      } else {
+        alert('Failed to delete parent: ' + response.error);
+      }
+    } catch (error) {
+      console.error('Error deleting parent:', error);
+      alert('Error deleting parent');
+    }
+  };
+
+  const deleteChild = async (childId: string, childName: string) => {
+    if (!confirm(`Delete ${childName}?`)) return;
+    
+    try {
+      const response = await apiService.deleteChild(childId);
+      if (response.success) {
+        loadData();
+        alert('Child deleted successfully!');
+      } else {
+        alert('Failed to delete child: ' + response.error);
+      }
+    } catch (error) {
+      console.error('Error deleting child:', error);
+      alert('Error deleting child');
+    }
+  };
+
   const downloadQrCode = async (parentId: string, parentName: string) => {
     try {
       const response = await apiService.getParentQrData(parentId);
@@ -188,13 +222,22 @@ export function AdminPage() {
                     <p className="text-sm text-gray-600">{parent.email}</p>
                     <p className="text-xs text-gray-500">{parent.childIds.length} children</p>
                   </div>
-                  <button
-                    onClick={() => downloadQrCode(parent.id, `${parent.firstName} ${parent.lastName}`)}
-                    className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors"
-                    title="Download QR Code"
-                  >
-                    <QrCode className="w-5 h-5" />
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => downloadQrCode(parent.id, `${parent.firstName} ${parent.lastName}`)}
+                      className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors"
+                      title="Download QR Code"
+                    >
+                      <QrCode className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => deleteParent(parent.id, `${parent.firstName} ${parent.lastName}`)}
+                      className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                      title="Delete Parent"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -222,8 +265,19 @@ export function AdminPage() {
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {children.map((child) => (
               <div key={child.id} className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-semibold text-gray-800">{child.firstName} {child.lastName}</h4>
-                <p className="text-sm text-gray-600">Group: Not assigned</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-gray-800">{child.firstName} {child.lastName}</h4>
+                    <p className="text-sm text-gray-600">Group: Not assigned</p>
+                  </div>
+                  <button
+                    onClick={() => deleteChild(child.id, `${child.firstName} ${child.lastName}`)}
+                    className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
+                    title="Delete Child"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

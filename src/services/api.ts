@@ -193,10 +193,26 @@ class ApiService {
 
   // QR Code scanning
   async scanQrCode(qrData: string) {
-    return this.request<any>('/api/scan', {
-      method: 'POST',
-      body: JSON.stringify({ qrData }),
-    });
+    try {
+      // Validate QR data format
+      const parsed = JSON.parse(qrData);
+      if (!parsed.family || !parsed.s) {
+        return {
+          success: false,
+          error: 'Invalid QR code format'
+        };
+      }
+      
+      return this.request<any>('/api/scan', {
+        method: 'POST',
+        body: JSON.stringify({ qrData }),
+      }, true);
+    } catch (e) {
+      return {
+        success: false,
+        error: 'Invalid QR code format'
+      };
+    }
   }
 
   // Logout
@@ -208,6 +224,18 @@ class ApiService {
       this.clearToken();
     }
     return result;
+  }
+
+  async deleteParent(parentId: string) {
+    return this.request<any>(`/api/parents/${parentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteChild(childId: string) {
+    return this.request<any>(`/api/children/${childId}`, {
+      method: 'DELETE',
+    });
   }
 
   // Health check (bypass encryption)
