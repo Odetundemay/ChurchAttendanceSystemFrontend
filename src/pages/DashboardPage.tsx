@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserCheck, UserX, TrendingUp, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { StatsCard } from '../components/Dashboard/StatsCard';
 import { apiService } from '../services/api';
 import { format, isToday } from 'date-fns';
 import { AttendanceRecord, Child } from '../types';
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,7 @@ export function DashboardPage() {
   const loadData = async () => {
     try {
       const [attendanceRes, childrenRes] = await Promise.all([
-        apiService.getAttendanceRecords(),
+        apiService.getTodaysAttendance(),
         apiService.getChildren()
       ]);
       
@@ -90,32 +92,29 @@ export function DashboardPage() {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
           <div className="space-y-4">
             {recentActivity.length > 0 ? (
-              recentActivity.map(record => {
-                const child = children.find(c => c.id === record.childId);
-                return (
-                  <div key={record.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                      <UserCheck className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-800">
-                        {child?.firstName && child?.lastName ? `${child.firstName} ${child.lastName}` : 'Unknown Child'}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {record.checkOutTime ? 'Checked out' : 'Checked in'} at{' '}
-                        {format(new Date(record.checkInTime), 'HH:mm')}
-                      </p>
-                    </div>
-                    <div className={`px-2 py-1 rounded-full text-xs ${
-                      record.checkOutTime 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {record.checkOutTime ? 'Complete' : 'Active'}
-                    </div>
+              recentActivity.map(record => (
+                <div key={record.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                    <UserCheck className="w-5 h-5 text-purple-600" />
                   </div>
-                );
-              })
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800">
+                      {record.childId}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {record.checkOutTime ? 'Checked out' : 'Checked in'} at{' '}
+                      {format(new Date(record.checkInTime), 'HH:mm')}
+                    </p>
+                  </div>
+                  <div className={`px-2 py-1 rounded-full text-xs ${
+                    record.checkOutTime 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {record.checkOutTime ? 'Complete' : 'Active'}
+                  </div>
+                </div>
+              ))
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -128,21 +127,30 @@ export function DashboardPage() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
           <div className="space-y-3">
-            <button className="w-full flex items-center space-x-3 p-4 text-left border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors">
+            <button 
+              onClick={() => navigate('/attendance')}
+              className="w-full flex items-center space-x-3 p-4 text-left border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
+            >
               <UserCheck className="w-6 h-6 text-purple-600" />
               <div>
                 <p className="font-medium text-gray-800">Start Check-In</p>
                 <p className="text-sm text-gray-600">Scan QR codes to check in children</p>
               </div>
             </button>
-            <button className="w-full flex items-center space-x-3 p-4 text-left border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors">
+            <button 
+              onClick={() => navigate('/attendance')}
+              className="w-full flex items-center space-x-3 p-4 text-left border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
+            >
               <UserX className="w-6 h-6 text-purple-600" />
               <div>
                 <p className="font-medium text-gray-800">Start Check-Out</p>
                 <p className="text-sm text-gray-600">Release children to parents</p>
               </div>
             </button>
-            <button className="w-full flex items-center space-x-3 p-4 text-left border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors">
+            <button 
+              onClick={() => navigate('/reports')}
+              className="w-full flex items-center space-x-3 p-4 text-left border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
+            >
               <TrendingUp className="w-6 h-6 text-purple-600" />
               <div>
                 <p className="font-medium text-gray-800">View Reports</p>

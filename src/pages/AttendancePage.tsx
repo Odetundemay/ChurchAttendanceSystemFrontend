@@ -16,6 +16,7 @@ export function AttendancePage() {
   const [selectedParent, setSelectedParent] = useState(null);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scanMode, setScanMode] = useState<'checkin' | 'checkout'>('checkin');
 
   useEffect(() => {
     loadAttendanceData();
@@ -23,7 +24,7 @@ export function AttendancePage() {
 
   const loadAttendanceData = async () => {
     try {
-      const response = await apiService.getAttendanceRecords();
+      const response = await apiService.getTodaysAttendance();
       if (response.success) {
         setAttendanceRecords(response.data || []);
       }
@@ -33,12 +34,10 @@ export function AttendancePage() {
       setLoading(false);
     }
   };
-  const [scanMode, setScanMode] = useState<'checkin' | 'checkout'>('checkin');
 
   const handleQRScan = async (qrData: string) => {
     console.log('QR Data received:', qrData);
     try {
-      // Validate QR data format before sending
       let parsedData;
       try {
         parsedData = JSON.parse(qrData);
@@ -62,7 +61,6 @@ export function AttendancePage() {
           setShowCheckOutModal(true);
         }
       } else {
-        // Handle encoded error messages
         let errorMsg = response.error || 'Parent not found. Please try scanning again.';
         if (errorMsg.includes('+') || errorMsg.includes('/') || errorMsg.includes('=')) {
           errorMsg = 'Server error occurred. Please try again or contact support.';
@@ -83,7 +81,7 @@ export function AttendancePage() {
         setShowCheckInModal(false);
         loadAttendanceData();
       } else {
-        alert('Failed to check in child. Please try again.');
+        alert(`Failed to check in child: ${response.error || 'Please try again.'}`);
       }
     } catch (error) {
       console.error('Check-in error:', error);
@@ -91,15 +89,29 @@ export function AttendancePage() {
     }
   };
 
-  const handleCheckOut = async (recordId: string, notes?: string) => {
+  const handleCheckOut = async (childId?: string, recordId?: string, notes?: string) => {
     try {
-      const response = await apiService.checkOut(recordId, notes);
+      let response;
+      if (childId) {
+        // Individual child checkout by child ID
+        response = await apiService.checkOutByChild(childId, notes);
+      } else if (recordId) {
+        // Individual child checkout by record ID (fallback)
+        response = await apiService.checkOut(recordId, notes);
+      } else if (selectedParent?.parent?.id) {
+        // All children checkout by parent
+        response = await apiService.checkOutByParent(selectedParent.parent.id, notes);
+      } else {
+        alert('Invalid checkout request');
+        return;
+      }
+
       if (response.success) {
-        alert('Child checked out successfully!');
+        alert('Child(ren) checked out successfully!');
         setShowCheckOutModal(false);
         loadAttendanceData();
       } else {
-        alert('Failed to check out child. Please try again.');
+        alert(`Failed to check out: ${response.error || 'Please try again.'}`);
       }
     } catch (error) {
       console.error('Check-out error:', error);
@@ -125,7 +137,12 @@ export function AttendancePage() {
     );
     
     return todaysRecords.map(record => ({
-      child: { id: record.childId, firstName: 'Child', lastName: 'Name' },
+      child: selectedParent?.children?.find(c => c.id === record.childId) || { 
+        id: record.childId, 
+        firstName: record.childId.split(' ')[0] || 'Child', 
+        lastName: record.childId.split(' ')[1] || 'Name',
+        photoUrl: `https://via.placeholder.com/150?text=${record.childId}`
+      },
       record
     }));
   };
@@ -200,7 +217,7 @@ export function AttendancePage() {
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
                     <h4 className="font-semibold text-gray-800">
-                      Child ID: {record.childId}
+                      {record.childId}
                     </h4>
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       record.checkOutTime 
@@ -211,7 +228,7 @@ export function AttendancePage() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Parent ID: {record.parentId}
+                    Parent: {record.parentId}
                   </p>
                   <p className="text-sm text-gray-500">
                     In: {format(new Date(record.checkInTime), 'HH:mm')}

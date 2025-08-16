@@ -216,6 +216,13 @@ class ApiService {
     });
   }
 
+  async checkOutByChild(childId: string, notes?: string) {
+    return this.request<any>('/api/attendance/checkout-by-child', {
+      method: 'POST',
+      body: JSON.stringify({ childId, notes }),
+    });
+  }
+
   // QR Code scanning
   async scanQrCode(qrData: string) {
     try {

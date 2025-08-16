@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Clock, User } from 'lucide-react';
+import { X, Clock, User, Users } from 'lucide-react';
 import { Child, Parent, AttendanceRecord } from '../../types';
 import { format } from 'date-fns';
 
@@ -8,23 +8,30 @@ interface CheckOutModalProps {
   onClose: () => void;
   parent: Parent | null;
   checkedInChildren: { child: Child; record: AttendanceRecord }[];
-  onCheckOut: (recordId: string, notes?: string) => void;
+  onCheckOut: (childId?: string, recordId?: string, notes?: string) => void;
 }
 
 export function CheckOutModal({ isOpen, onClose, parent, checkedInChildren, onCheckOut }: CheckOutModalProps) {
   const [selectedRecord, setSelectedRecord] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [checkoutMode, setCheckoutMode] = useState<'individual' | 'all'>('all');
 
   if (!isOpen || !parent) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedRecord) {
-      onCheckOut(selectedRecord, notes.trim() || undefined);
-      setSelectedRecord('');
-      setNotes('');
-      onClose();
+    if (checkoutMode === 'all') {
+      onCheckOut(undefined, undefined, notes.trim() || undefined);
+    } else if (selectedRecord) {
+      const selectedChild = checkedInChildren.find(c => c.record.id === selectedRecord);
+      if (selectedChild) {
+        onCheckOut(selectedChild.child.id, undefined, notes.trim() || undefined);
+      }
     }
+    setSelectedRecord('');
+    setNotes('');
+    setCheckoutMode('all');
+    onClose();
   };
 
   return (
@@ -68,57 +75,101 @@ export function CheckOutModal({ isOpen, onClose, parent, checkedInChildren, onCh
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
-              <h4 className="text-lg font-medium text-gray-800 mb-4">Select Child to Check Out</h4>
-              <div className="space-y-3">
-                {checkedInChildren.map(({ child, record }) => (
-                  <div
-                    key={record.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                      selectedRecord === record.id
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-purple-300'
-                    }`}
-                    onClick={() => setSelectedRecord(record.id)}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
-                        <img
-                          src={child.photoUrl}
-                          alt={`${child.firstName} ${child.lastName}`}
-                          className="w-16 h-16 rounded-full object-cover"
-                        />
+              <h4 className="text-lg font-medium text-gray-800 mb-4">Checkout Options</h4>
+              
+              <div className="space-y-3 mb-4">
+                <div
+                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                    checkoutMode === 'all'
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-300'
+                  }`}
+                  onClick={() => setCheckoutMode('all')}
+                >
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      name="checkoutMode"
+                      value="all"
+                      checked={checkoutMode === 'all'}
+                      onChange={() => setCheckoutMode('all')}
+                      className="w-4 h-4 text-purple-600"
+                    />
+                    <Users className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <p className="font-medium text-gray-800">Check Out All Children</p>
+                      <p className="text-sm text-gray-600">Check out all {checkedInChildren.length} children at once</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                    checkoutMode === 'individual'
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-300'
+                  }`}
+                  onClick={() => setCheckoutMode('individual')}
+                >
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      name="checkoutMode"
+                      value="individual"
+                      checked={checkoutMode === 'individual'}
+                      onChange={() => setCheckoutMode('individual')}
+                      className="w-4 h-4 text-purple-600"
+                    />
+                    <User className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <p className="font-medium text-gray-800">Check Out Individual Child</p>
+                      <p className="text-sm text-gray-600">Select a specific child to check out</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {checkoutMode === 'individual' && (
+                <div className="space-y-3 ml-6">
+                  <h5 className="font-medium text-gray-700">Select Child:</h5>
+                  {checkedInChildren.map(({ child, record }) => (
+                    <div
+                      key={record.id}
+                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                        selectedRecord === record.id
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-purple-300'
+                      }`}
+                      onClick={() => setSelectedRecord(record.id)}
+                    >
+                      <div className="flex items-center space-x-3">
                         <input
                           type="radio"
                           name="selectedRecord"
                           value={record.id}
                           checked={selectedRecord === record.id}
                           onChange={() => setSelectedRecord(record.id)}
-                          className="absolute top-0 right-0 w-5 h-5"
+                          className="w-4 h-4 text-purple-600"
                         />
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-semibold text-gray-800">
-                          {child.firstName} {child.lastName}
-                        </h5>
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
-                          <Clock className="w-4 h-4" />
-                          <span>Checked in: {format(record.checkInTime, 'HH:mm')}</span>
-                        </div>
-                        {record.notes && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            Notes: {record.notes}
+                        <img
+                          src={child.photoUrl}
+                          alt={`${child.firstName} ${child.lastName}`}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-800">
+                            {child.firstName} {child.lastName}
                           </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                          Checked In
-                        </span>
+                          <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            <Clock className="w-3 h-3" />
+                            <span>Checked in: {format(record.checkInTime, 'HH:mm')}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mb-6">
@@ -151,10 +202,10 @@ export function CheckOutModal({ isOpen, onClose, parent, checkedInChildren, onCh
               </button>
               <button
                 type="submit"
-                disabled={!selectedRecord}
+                disabled={checkoutMode === 'individual' && !selectedRecord}
                 className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white rounded-lg transition-colors"
               >
-                Check Out Child
+                {checkoutMode === 'all' ? 'Check Out All' : 'Check Out Child'}
               </button>
             </div>
           </form>
