@@ -1,26 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Baby, Plus, QrCode, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Baby, Plus, QrCode, Trash2, Upload } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 import QRCode from 'qrcode';
 
 interface Parent {
   id: string;
   firstName: string;
   lastName: string;
+  gender: string;
   phone: string;
   email: string;
   childIds: string[];
+  imageUrl?: string;
 }
 
 interface Child {
   id: string;
-  fullName: string;
-  group: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  photoUrl: string;
 }
 
 export function AdminPage() {
   const { currentUser } = useAuth();
+  const { success, error } = useToast();
   const [parents, setParents] = useState<Parent[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [showAddParent, setShowAddParent] = useState(false);
@@ -31,17 +37,21 @@ export function AdminPage() {
   const [parentForm, setParentForm] = useState({
     firstName: '',
     lastName: '',
+    gender: '',
     phone: '',
-    email: ''
+    email: '',
+    imageUrl: ''
   });
 
   const [childForm, setChildForm] = useState({
     firstName: '',
     lastName: '',
+    gender: '',
     dateOfBirth: '2020-01-01',
     allergies: '',
     emergencyContact: '',
-    medicalNotes: ''
+    medicalNotes: '',
+    imageUrl: ''
   });
 
   useEffect(() => {
@@ -57,8 +67,8 @@ export function AdminPage() {
 
       if (parentsRes.success) setParents(parentsRes.data || []);
       if (childrenRes.success) setChildren(childrenRes.data || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
+    } catch (err) {
+      error('Failed to load data', 'Please try refreshing the page');
     } finally {
       setLoading(false);
     }
@@ -69,40 +79,38 @@ export function AdminPage() {
     try {
       const response = await apiService.createParent(parentForm);
       if (response.success) {
-        setParentForm({ firstName: '', lastName: '', phone: '', email: '' });
+        setParentForm({ firstName: '', lastName: '', gender: '', phone: '', email: '', imageUrl: '' });
         setShowAddParent(false);
         loadData();
-        alert('Parent added successfully!');
+        success('Parent Added', 'Parent has been added successfully');
       } else {
-        alert('Failed to add parent: ' + response.error);
+        error('Failed to Add Parent', response.error || 'Please try again');
       }
-    } catch (error) {
-      console.error('Error adding parent:', error);
-      alert('Error adding parent');
+    } catch (err) {
+      error('Error Adding Parent', 'Please try again');
     }
   };
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedParentId) {
-      alert('Please select a parent');
+      error('No Parent Selected', 'Please select a parent');
       return;
     }
 
     try {
       const response = await apiService.createChild(selectedParentId, childForm);
       if (response.success) {
-        setChildForm({ firstName: '', lastName: '', dateOfBirth: '2020-01-01', allergies: '', emergencyContact: '', medicalNotes: '' });
+        setChildForm({ firstName: '', lastName: '', gender: '', dateOfBirth: '2020-01-01', allergies: '', emergencyContact: '', medicalNotes: '', imageUrl: '' });
         setShowAddChild(false);
         setSelectedParentId('');
         loadData();
-        alert('Child added successfully!');
+        success('Child Added', 'Child has been added successfully');
       } else {
-        alert('Failed to add child: ' + response.error);
+        error('Failed to Add Child', response.error || 'Please try again');
       }
-    } catch (error) {
-      console.error('Error adding child:', error);
-      alert('Error adding child');
+    } catch (err) {
+      error('Error Adding Child', 'Please try again');
     }
   };
 
@@ -113,13 +121,12 @@ export function AdminPage() {
       const response = await apiService.deleteParent(parentId);
       if (response.success) {
         loadData();
-        alert('Parent deleted successfully!');
+        success('Parent Deleted', 'Parent has been deleted successfully');
       } else {
-        alert('Failed to delete parent: ' + response.error);
+        error('Failed to Delete Parent', response.error || 'Please try again');
       }
-    } catch (error) {
-      console.error('Error deleting parent:', error);
-      alert('Error deleting parent');
+    } catch (err) {
+      error('Error Deleting Parent', 'Please try again');
     }
   };
 
@@ -130,13 +137,12 @@ export function AdminPage() {
       const response = await apiService.deleteChild(childId);
       if (response.success) {
         loadData();
-        alert('Child deleted successfully!');
+        success('Child Deleted', 'Child has been deleted successfully');
       } else {
-        alert('Failed to delete child: ' + response.error);
+        error('Failed to Delete Child', response.error || 'Please try again');
       }
-    } catch (error) {
-      console.error('Error deleting child:', error);
-      alert('Error deleting child');
+    } catch (err) {
+      error('Error Deleting Child', 'Please try again');
     }
   };
 
@@ -160,20 +166,20 @@ export function AdminPage() {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        success('QR Code Downloaded', 'QR code has been saved to your downloads');
       } else {
-        alert('Failed to generate QR code: ' + (response.error || 'Unknown error'));
+        error('Failed to Generate QR Code', response.error || 'Please try again');
       }
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-      alert('Error generating QR code');
+    } catch (err) {
+      error('Error Generating QR Code', 'Please try again');
     }
   };
 
-  if (currentUser?.role !== 'admin') {
+  if (currentUser?.role !== 'Admin') {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
-        <p className="text-gray-600">You need admin privileges to access this page.</p>
+        <h2 className="text-2xl font-bold text-secondary-900 mb-4">Access Denied</h2>
+        <p className="text-secondary-600">You need admin privileges to access this page.</p>
       </div>
     );
   }
@@ -181,7 +187,7 @@ export function AdminPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
       </div>
     );
   }
@@ -189,8 +195,8 @@ export function AdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
-        <p className="text-gray-600">Manage parents, children, and generate QR codes.</p>
+        <h1 className="text-2xl font-bold text-secondary-900">Admin Panel</h1>
+        <p className="text-secondary-600">Manage parents, children, and generate QR codes.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -201,7 +207,7 @@ export function AdminPage() {
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">Parents ({parents.length})</h3>
+              <h3 className="text-lg font-semibold text-secondary-800">Parents ({parents.length})</h3>
             </div>
             <button
               onClick={() => setShowAddParent(true)}
@@ -216,16 +222,21 @@ export function AdminPage() {
             {parents.map((parent) => (
               <div key={parent.id} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-gray-800">{parent.firstName} {parent.lastName}</h4>
-                    <p className="text-sm text-gray-600">{parent.phone}</p>
-                    <p className="text-sm text-gray-600">{parent.email}</p>
-                    <p className="text-xs text-gray-500">{parent.childIds.length} children</p>
+                  <div className="flex items-center space-x-3">
+                    {parent.imageUrl && (
+                      <img src={parent.imageUrl} alt={parent.firstName} className="w-10 h-10 rounded-full object-cover" />
+                    )}
+                    <div>
+                      <h4 className="font-semibold text-secondary-800">{parent.firstName} {parent.lastName}</h4>
+                      <p className="text-sm text-secondary-600">{parent.gender} • {parent.phone}</p>
+                      <p className="text-sm text-secondary-600">{parent.email}</p>
+                      <p className="text-xs text-secondary-500">{parent.childIds.length} children</p>
+                    </div>
                   </div>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => downloadQrCode(parent.id, `${parent.firstName} ${parent.lastName}`)}
-                      className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors"
+                      className="p-2 bg-primary-100 hover:bg-primary-200 text-primary-600 rounded-lg transition-colors"
                       title="Download QR Code"
                     >
                       <QrCode className="w-5 h-5" />
@@ -251,7 +262,7 @@ export function AdminPage() {
               <div className="p-2 bg-green-100 rounded-lg">
                 <Baby className="w-6 h-6 text-green-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">Children ({children.length})</h3>
+              <h3 className="text-lg font-semibold text-secondary-800">Children ({children.length})</h3>
             </div>
             <button
               onClick={() => setShowAddChild(true)}
@@ -266,9 +277,12 @@ export function AdminPage() {
             {children.map((child) => (
               <div key={child.id} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-gray-800">{child.firstName} {child.lastName}</h4>
-                    <p className="text-sm text-gray-600">Group: Not assigned</p>
+                  <div className="flex items-center space-x-3">
+                    <img src={child.photoUrl} alt={child.firstName} className="w-10 h-10 rounded-full object-cover" />
+                    <div>
+                      <h4 className="font-semibold text-secondary-800">{child.firstName} {child.lastName}</h4>
+                      <p className="text-sm text-secondary-600">{child.gender}</p>
+                    </div>
                   </div>
                   <button
                     onClick={() => deleteChild(child.id, `${child.firstName} ${child.lastName}`)}
@@ -287,58 +301,82 @@ export function AdminPage() {
       {/* Add Parent Modal */}
       {showAddParent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Add New Parent</h3>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-secondary-800 mb-4">Add New Parent</h3>
             <form onSubmit={handleAddParent} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">First Name</label>
                 <input
                   type="text"
                   required
                   value={parentForm.firstName}
                   onChange={(e) => setParentForm({ ...parentForm, firstName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Last Name</label>
                 <input
                   type="text"
                   required
                   value={parentForm.lastName}
                   onChange={(e) => setParentForm({ ...parentForm, lastName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Gender</label>
+                <select
+                  required
+                  value={parentForm.gender}
+                  onChange={(e) => setParentForm({ ...parentForm, gender: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Phone</label>
                 <input
                   type="tel"
                   value={parentForm.phone}
                   onChange={(e) => setParentForm({ ...parentForm, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Email</label>
                 <input
                   type="email"
                   value={parentForm.email}
                   onChange={(e) => setParentForm({ ...parentForm, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Image URL (Optional)</label>
+                <input
+                  type="url"
+                  value={parentForm.imageUrl}
+                  onChange={(e) => setParentForm({ ...parentForm, imageUrl: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowAddParent(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-300 text-secondary-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
                 >
                   Add Parent
                 </button>
@@ -351,16 +389,16 @@ export function AdminPage() {
       {/* Add Child Modal */}
       {showAddChild && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Add New Child</h3>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-secondary-800 mb-4">Add New Child</h3>
             <form onSubmit={handleAddChild} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Parent</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Select Parent</label>
                 <select
                   required
                   value={selectedParentId}
                   onChange={(e) => setSelectedParentId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">Choose a parent...</option>
                   {parents.map((parent) => (
@@ -371,42 +409,86 @@ export function AdminPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">First Name</label>
                 <input
                   type="text"
                   required
                   value={childForm.firstName}
                   onChange={(e) => setChildForm({ ...childForm, firstName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Last Name</label>
                 <input
                   type="text"
                   required
                   value={childForm.lastName}
                   onChange={(e) => setChildForm({ ...childForm, lastName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Gender</label>
+                <select
+                  required
+                  value={childForm.gender}
+                  onChange={(e) => setChildForm({ ...childForm, gender: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Date of Birth</label>
                 <input
                   type="date"
                   value={childForm.dateOfBirth}
                   onChange={(e) => setChildForm({ ...childForm, dateOfBirth: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Allergies (Optional)</label>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Allergies (Optional)</label>
                 <input
                   type="text"
                   value={childForm.allergies}
                   onChange={(e) => setChildForm({ ...childForm, allergies: e.target.value })}
                   placeholder="e.g., Peanuts, Dairy"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Emergency Contact (Optional)</label>
+                <input
+                  type="text"
+                  value={childForm.emergencyContact}
+                  onChange={(e) => setChildForm({ ...childForm, emergencyContact: e.target.value })}
+                  placeholder="Emergency contact information"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Medical Notes (Optional)</label>
+                <textarea
+                  value={childForm.medicalNotes}
+                  onChange={(e) => setChildForm({ ...childForm, medicalNotes: e.target.value })}
+                  placeholder="Any medical conditions or notes"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">Image URL (Optional)</label>
+                <input
+                  type="url"
+                  value={childForm.imageUrl}
+                  onChange={(e) => setChildForm({ ...childForm, imageUrl: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div className="flex space-x-3 pt-4">
@@ -416,13 +498,13 @@ export function AdminPage() {
                     setShowAddChild(false);
                     setSelectedParentId('');
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-300 text-secondary-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
                 >
                   Add Child
                 </button>
