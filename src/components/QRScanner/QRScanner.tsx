@@ -33,8 +33,22 @@ export function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
       qrScannerRef.current = new QrScanner(
         videoRef.current,
         (result) => {
-          onScan(result.data);
-          onClose();
+          console.log('QR Code scanned:', result.data);
+          try {
+            // Validate JSON format
+            const parsed = JSON.parse(result.data);
+            console.log('Parsed QR data:', parsed);
+            
+            // Check if it has the expected structure
+            if (parsed.family && parsed.s) {
+              onScan(result.data);
+            } else {
+              setError('Invalid QR code. Please scan a parent QR code.');
+            }
+          } catch (e) {
+            console.error('Invalid QR code format:', e);
+            setError('Invalid QR code format. Please scan a valid parent QR code.');
+          }
         },
         {
           preferredCamera: 'environment',
@@ -96,10 +110,22 @@ export function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
           )}
         </div>
 
-        <div className="text-center">
+        <div className="text-center space-y-3">
           <p className="text-gray-600 text-sm">
             Position the QR code within the frame to scan
           </p>
+          
+          {/* Test button with real data format */}
+          <button
+            onClick={() => {
+              const testData = JSON.stringify({"family":"b2a4fe8b-a30c-4f00-8c99-b0fd75c6a106","s":"dGVzdFNlY3JldA=="});
+              console.log('Testing with:', testData);
+              onScan(testData);
+            }}
+            className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors text-sm"
+          >
+            Test Scan (Debug)
+          </button>
         </div>
       </div>
     </div>

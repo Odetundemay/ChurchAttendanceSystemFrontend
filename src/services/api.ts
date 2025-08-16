@@ -135,8 +135,8 @@ class ApiService {
     });
   }
 
-  async getParentQrCode(parentId: string) {
-    return this.request<Blob>('/api/parents/qr', {
+  async getParentQrData(parentId: string) {
+    return this.request<{ family: string; s: string }>('/api/parents/qr', {
       method: 'POST',
       body: JSON.stringify({ id: parentId }),
     });

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Baby, Plus, QrCode } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import QRCode from 'qrcode';
 
 interface Parent {
   id: string;
@@ -107,23 +108,30 @@ export function AdminPage() {
 
   const downloadQrCode = async (parentId: string, parentName: string) => {
     try {
-      const response = await apiService.getParentQrCode(parentId);
+      const response = await apiService.getParentQrData(parentId);
       if (response.success && response.data) {
-        const blob = response.data instanceof Blob ? response.data : new Blob([response.data as any], { type: 'image/png' });
-        const url = URL.createObjectURL(blob);
+        const qrData = JSON.stringify(response.data);
+        const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+          width: 300,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+        
         const a = document.createElement('a');
-        a.href = url;
+        a.href = qrCodeDataUrl;
         a.download = `${parentName.replace(/\s+/g, '_')}_QR.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
       } else {
-        alert('Failed to download QR code: ' + (response.error || 'Unknown error'));
+        alert('Failed to generate QR code: ' + (response.error || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error downloading QR code:', error);
-      alert('Error downloading QR code');
+      console.error('Error generating QR code:', error);
+      alert('Error generating QR code');
     }
   };
 

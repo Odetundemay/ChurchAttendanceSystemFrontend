@@ -36,17 +36,21 @@ export function AttendancePage() {
   const [scanMode, setScanMode] = useState<'checkin' | 'checkout'>('checkin');
 
   const handleQRScan = async (qrData: string) => {
+    console.log('QR Data received:', qrData);
     try {
       const response = await apiService.scanQrCode(qrData);
+      console.log('Scan response:', response);
+      
       if (response.success && response.data) {
         setSelectedParent(response.data);
+        setShowQRScanner(false);
         if (scanMode === 'checkin') {
           setShowCheckInModal(true);
         } else {
           setShowCheckOutModal(true);
         }
       } else {
-        alert(response.error || 'Parent not found. Please try scanning again.');
+        alert(`Scan failed: ${response.error || 'Parent not found. Please try scanning again.'}`);
       }
     } catch (error) {
       console.error('QR scan error:', error);
