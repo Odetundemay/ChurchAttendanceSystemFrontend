@@ -139,9 +139,9 @@ export function AttendancePage() {
     return todaysRecords.map(record => ({
       child: selectedParent?.children?.find(c => c.id === record.childId) || { 
         id: record.childId, 
-        firstName: record.childId.split(' ')[0] || 'Child', 
-        lastName: record.childId.split(' ')[1] || 'Name',
-        photoUrl: `https://via.placeholder.com/150?text=${record.childId}`
+        firstName: record.childName?.split(' ')[0] || 'Child', 
+        lastName: record.childName?.split(' ')[1] || 'Name',
+        photoUrl: `https://via.placeholder.com/150?text=${encodeURIComponent(record.childName || 'Child')}`
       },
       record
     }));
@@ -217,7 +217,7 @@ export function AttendancePage() {
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
                     <h4 className="font-semibold text-gray-800">
-                      {record.childId}
+                      {record.childName || record.childId}
                     </h4>
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       record.checkOutTime 
@@ -228,7 +228,7 @@ export function AttendancePage() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Parent: {record.parentId}
+                    Parent: {record.parentName || record.parentId}
                   </p>
                   <p className="text-sm text-gray-500">
                     In: {format(new Date(record.checkInTime), 'HH:mm')}

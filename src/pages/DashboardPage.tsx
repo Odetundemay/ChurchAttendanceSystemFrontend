@@ -99,7 +99,7 @@ export function DashboardPage() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-gray-800">
-                      {record.childId}
+                      {record.childName || record.childId}
                     </p>
                     <p className="text-sm text-gray-600">
                       {record.checkOutTime ? 'Checked out' : 'Checked in'} at{' '}
