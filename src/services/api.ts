@@ -191,6 +191,31 @@ class ApiService {
     });
   }
 
+  async getTodaysAttendance() {
+    return this.request<any[]>('/api/attendance/today', {
+      method: 'GET',
+    });
+  }
+
+  async getRecentActivity() {
+    return this.request<any[]>('/api/attendance/recent', {
+      method: 'GET',
+    });
+  }
+
+  async getCheckedInChildrenByParent(parentId: string) {
+    return this.request<any[]>(`/api/attendance/parent/${parentId}/checked-in`, {
+      method: 'GET',
+    });
+  }
+
+  async checkOutByParent(parentId: string, notes?: string) {
+    return this.request<any[]>('/api/attendance/checkout-by-parent', {
+      method: 'POST',
+      body: JSON.stringify({ parentId, notes }),
+    });
+  }
+
   // QR Code scanning
   async scanQrCode(qrData: string) {
     try {
