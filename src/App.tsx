@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 import { BackendHealthCheck } from './components/BackendHealthCheck';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -9,7 +10,6 @@ import { ReportsPage } from './pages/ReportsPage';
 import { AdminPage } from './pages/AdminPage';
 import { Navbar } from './components/Layout/Navbar';
 import { ToastContainer } from './components/Toast/ToastContainer';
-import { useToast } from './hooks/useToast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, isLoading } = useAuth();
@@ -72,11 +72,13 @@ function AppRoutes() {
 function App() {
   return (
     <BackendHealthCheck>
-      <AuthProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </AuthProvider>
+      </ToastProvider>
     </BackendHealthCheck>
   );
 }

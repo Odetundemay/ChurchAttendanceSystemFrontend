@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Baby, Plus, QrCode, Trash2, Upload } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../hooks/useToast';
+import { useToast } from '../contexts/ToastContext';
+import { ConfirmModal } from '../components/ConfirmModal';
 import QRCode from 'qrcode';
 
 interface Parent {
@@ -33,6 +34,12 @@ export function AdminPage() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [selectedParentId, setSelectedParentId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const [parentForm, setParentForm] = useState({
     firstName: '',
@@ -104,8 +111,8 @@ export function AdminPage() {
         setChildForm({ firstName: '', lastName: '', gender: '', dateOfBirth: '2020-01-01', allergies: '', emergencyContact: '', medicalNotes: '', imageUrl: '' });
         setShowAddChild(false);
         setSelectedParentId('');
-        loadData();
-        success('Child Added', 'Child has been added successfully');
+        await loadData();
+        success('Child Added', `${childForm.firstName} ${childForm.lastName} has been added successfully`);
       } else {
         error('Failed to Add Child', response.error || 'Please try again');
       }
@@ -115,13 +122,11 @@ export function AdminPage() {
   };
 
   const deleteParent = async (parentId: string, parentName: string) => {
-    if (!confirm(`Delete ${parentName}? This will also delete all their children.`)) return;
-    
     try {
       const response = await apiService.deleteParent(parentId);
       if (response.success) {
         loadData();
-        success('Parent Deleted', 'Parent has been deleted successfully');
+        success('Parent Deleted', `${parentName} and their children have been deleted`);
       } else {
         error('Failed to Delete Parent', response.error || 'Please try again');
       }
@@ -130,20 +135,42 @@ export function AdminPage() {
     }
   };
 
+  const confirmDeleteParent = (parentId: string, parentName: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Parent',
+      message: `Are you sure you want to delete ${parentName}? This will also delete all their children and cannot be undone.`,
+      onConfirm: () => {
+        deleteParent(parentId, parentName);
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+      }
+    });
+  };
+
   const deleteChild = async (childId: string, childName: string) => {
-    if (!confirm(`Delete ${childName}?`)) return;
-    
     try {
       const response = await apiService.deleteChild(childId);
       if (response.success) {
         loadData();
-        success('Child Deleted', 'Child has been deleted successfully');
+        success('Child Deleted', `${childName} has been deleted successfully`);
       } else {
         error('Failed to Delete Child', response.error || 'Please try again');
       }
     } catch (err) {
       error('Error Deleting Child', 'Please try again');
     }
+  };
+
+  const confirmDeleteChild = (childId: string, childName: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Child',
+      message: `Are you sure you want to delete ${childName}? This action cannot be undone.`,
+      onConfirm: () => {
+        deleteChild(childId, childName);
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+      }
+    });
   };
 
   const downloadQrCode = async (parentId: string, parentName: string) => {
@@ -175,11 +202,15 @@ export function AdminPage() {
     }
   };
 
-  if (currentUser?.role !== 'Admin') {
+  console.log('Current user:', currentUser);
+  console.log('User role:', currentUser?.role);
+  
+  if (currentUser?.role?.toLowerCase() !== 'admin') {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-secondary-900 mb-4">Access Denied</h2>
         <p className="text-secondary-600">You need admin privileges to access this page.</p>
+        <p className="text-secondary-500 text-sm mt-2">Current role: {currentUser?.role || 'Not logged in'}</p>
       </div>
     );
   }
@@ -242,7 +273,7 @@ export function AdminPage() {
                       <QrCode className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => deleteParent(parent.id, `${parent.firstName} ${parent.lastName}`)}
+                      onClick={() => confirmDeleteParent(parent.id, `${parent.firstName} ${parent.lastName}`)}
                       className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                       title="Delete Parent"
                     >
@@ -285,7 +316,7 @@ export function AdminPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => deleteChild(child.id, `${child.firstName} ${child.lastName}`)}
+                    onClick={() => confirmDeleteChild(child.id, `${child.firstName} ${child.lastName}`)}
                     className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
                     title="Delete Child"
                   >
@@ -513,6 +544,17 @@ export function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+        confirmText="Delete"
+        type="danger"
+      />
     </div>
   );
 }
